@@ -66,7 +66,18 @@ do
 			Harmful = wipe(Harmful)
 			for actionButton in pairs(Actions) do
 				local action = actionButton:GetAttribute('action')
-				if control:RunFor(self, self:GetAttribute('IsHelpfulAction'), action) then
+				local spellName = actionButton:GetAttribute('cpspellname')
+
+				if spellName then
+					if IsHarmfulSpell(spellName) then
+						Harmful[actionButton] = true
+					elseif IsHelpfulSpell(spellName) then
+						Helpful[actionButton] = true
+					else
+						Helpful[actionButton] = true
+						Harmful[actionButton] = true
+					end
+				elseif control:RunFor(self, self:GetAttribute('IsHelpfulAction'), action) then
 					Helpful[actionButton] = true
 				elseif control:RunFor(self, self:GetAttribute('IsHarmfulAction'), action) then
 					Harmful[actionButton] = true
@@ -220,12 +231,6 @@ do
 		UpdateRouting = [=[
 			local reroute = not self:GetAttribute('noRouting')
 
-			if reroute then
-				for action, unit in pairs(Actions) do
-					action:SetAttribute('unit', unit)
-				end
-			end
-
 			local unit = current and current:GetAttribute('unit')
 
 			if unit then
@@ -253,6 +258,19 @@ do
 							action:SetAttribute('unit', unit)
 						end
 					end
+
+					print('=== Final Action Routing ===')
+					for action in pairs(Actions) do
+						local buttonName = action:GetName()
+						local actionID = action:GetAttribute('action')
+						local spellName = action:GetAttribute('cpspellname')
+						local targetUnit = action:GetAttribute('unit')
+						if spellName then
+							print('Button:', buttonName or 'unnamed', 'Action:', actionID or 'nil', 'Spell:', spellName, '-> unit:', targetUnit or 'nil')
+						end
+					end
+					print('=== End Routing ===')
+					self:SetAttribute('lastRoutedUnit', unit)
 				end
 			else
 				UnregisterStateDriver(self, 'unitexists')
@@ -260,20 +278,27 @@ do
 				Focus:SetAttribute('unit', nil)
 				Target:SetAttribute('unit', nil)
 
+				if reroute then
+					for action, unit in pairs(Actions) do
+						action:SetAttribute('unit', unit)
+					end
+				end
+
 				self:Hide()
 			end
 		]=]
-		ToggleCursor = [=[  
-			if IsEnabled then 
+		ToggleCursor = [=[
+			if IsEnabled then
+				control:Run(RefreshActions)
 				local modifier, bindingKey = self:GetAttribute('modifier')
 				for binding, inputKey in pairs(DPAD) do
 					bindingKey = GetBindingKey(binding)
 					if bindingKey then
 						self:SetBindingClick(true, modifier..bindingKey, self, inputKey)
 					end
-				end 
+				end
 				control:Run(UpdateFrameStack)
-				self:Show() 
+				self:Show()
 			else
 				--UnregisterStateDriver(self, 'unitexists')
 
@@ -352,6 +377,15 @@ function ConsolePort:SetupRaidCursor()
 	Cursor.Timer = 0
 	Cursor:SetScript('OnUpdate', Cursor.OnUpdate)
 	Cursor:SetScript('OnEvent', Cursor.OnEvent)
+end
+
+function ConsolePort:RefreshRaidCursorRouting()
+	if not InCombatLockdown() and Cursor:IsVisible() then
+		Cursor:Execute([[
+			control:Run(RefreshActions)
+			control:Run(UpdateRouting)
+		]])
+	end
 end
 
 function ConsolePort:LoadRaidCursor()

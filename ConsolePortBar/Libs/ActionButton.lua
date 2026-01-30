@@ -108,10 +108,11 @@ local type_meta_map = {
 local ButtonRegistry, ActiveButtons, ActionButtons, NonActionButtons = lib.buttonRegistry, lib.activeButtons, lib.actionButtons, lib.nonActionButtons
 
 local Update, UpdateButtonState, UpdateUsable, UpdateCount, UpdateCooldown, UpdateTooltip, UpdateNewAction, UpdatePage
-local StartFlash, StopFlash, UpdateFlash, UpdateRangeTimer 
-local ShowGrid, HideGrid, UpdateGrid, SetupSecureSnippets, WrapOnClick 
+local StartFlash, StopFlash, UpdateFlash, UpdateRangeTimer
+local ShowGrid, HideGrid, UpdateGrid, SetupSecureSnippets, WrapOnClick
 
 local InitializeEventHandler, OnEvent, ForAllButtons, OnUpdate
+local UpdateSpellNameCache
 
 local DefaultConfig = {
 	outOfRangeColoring = "button",
@@ -189,24 +190,24 @@ function SetupSecureSnippets(button)
 	-- update the type and action of the button based on the state
 	button:SetAttribute("UpdateState", [[
 		local state = ...
-		local _type = type  
+		local _type = type
 
 		self:SetAttribute("state", state)
 
 		local type, action = (self:GetAttribute(format("labtype-%s", state)) or "empty"), self:GetAttribute(format("labaction-%s", state))
 
-		self:SetAttribute("type", type) 
+		self:SetAttribute("type", type)
 		if type ~= "empty" and type ~= "custom" then
 			local action_field = (type == "pet") and "action" or type
-			self:SetAttribute(action_field, action) 
+			self:SetAttribute(action_field, action)
 			self:SetAttribute("action_field", action_field)
 		end
-		self:SetID((type == "action" and _type(action) == "number" and action <= 12 and action) or 0) 
-		if self:GetID() > 0 then  
+		self:SetID((type == "action" and _type(action) == "number" and action <= 12 and action) or 0)
+		if self:GetID() > 0 then
 			control:CallMethod("CallMethodFromFrame", self:GetName(), "ButtonContentsChanged", state, type, action + ((self:GetAttribute('actionpage') - 1) * 12))
 		end
 		local onStateChanged = self:GetAttribute("OnStateChanged")
-		if onStateChanged then 
+		if onStateChanged then
 			control:Run(onStateChanged, state, type, action)
 		end
 	]])
@@ -214,8 +215,8 @@ function SetupSecureSnippets(button)
 	button:SetAttribute("actionpage", 1) 
 
 	-- this function is invoked by the header when the state changes
-	button:SetAttribute("_childupdate-state", [[ 
-		control:RunFor(self, self:GetAttribute("UpdateState"), message) 
+	button:SetAttribute("_childupdate-state", [[
+		control:RunFor(self, self:GetAttribute("UpdateState"), message)
         control:CallMethod("CallMethodFromFrame", self:GetName(), "UpdateAction")
 	]])
  
@@ -704,6 +705,7 @@ function InitializeEventHandler()
 	lib.eventFrame:RegisterEvent("SPELL_UPDATE_COOLDOWN")
 	lib.eventFrame:RegisterEvent("SPELL_UPDATE_USABLE")
 	lib.eventFrame:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
+	lib.eventFrame:RegisterEvent("MODIFIER_STATE_CHANGED")
 
 	lib.eventFrame:Show()
 	lib.eventFrame:SetScript("OnUpdate", OnUpdate)
@@ -722,7 +724,10 @@ function OnEvent(frame, event, arg1, ...)
 			end
 		end
 	elseif event == "PLAYER_ENTERING_WORLD" or event == "UPDATE_SHAPESHIFT_FORM" then
-		ForAllButtons(Update) 
+		ForAllButtons(Update)
+		if event == "PLAYER_ENTERING_WORLD" then
+			UpdateSpellNameCache(true)
+		end
 	elseif event == "ACTIONBAR_SHOWGRID" then
 		ShowGrid()
 	elseif event == "ACTIONBAR_HIDEGRID" then
@@ -789,6 +794,8 @@ function OnEvent(frame, event, arg1, ...)
 				Update(button)
 			end
 		end
+	elseif event == "MODIFIER_STATE_CHANGED" then
+		UpdateSpellNameCache()
 	end
 end
 
@@ -996,14 +1003,14 @@ function Update(self)
 		UpdateUsable(self)
 		UpdateCooldown(self)
 		UpdateFlash(self)
-		UpdatePage(self) 
+		UpdatePage(self)
 	else
 		ActiveButtons[self] = nil
 		ActionButtons[self] = nil
 		NonActionButtons[self] = nil
 		self.cooldown:Hide()
-		self:SetChecked(0) 
- 
+		self:SetChecked(0)
+
 		self.isGlowing = false
 		self.isOnCooldown = false
 		self:FadeOut()
@@ -1026,17 +1033,17 @@ function Update(self)
 		self.Name:SetText("")
 	end
 
-	-- Update icon and hotkey 
+	-- Update icon and hotkey
 	local texture = self:GetTexture()
-	if texture then   
+	if texture then
 		self.rangeTimer = - 1
 	else
 		self.cooldown:Hide()
 		self.rangeTimer = nil
 	end
- 
+
 	self.icon:SetDesaturated(not texture and true or false)
-	SetPortraitToTexture(self.icon, texture or [[Interface\AddOns\ConsolePortBar\Textures\ability-empty]])   
+	SetPortraitToTexture(self.icon, texture or [[Interface\AddOns\ConsolePortBar\Textures\ability-empty]])
 
 	UpdateCount(self)
 
@@ -1190,6 +1197,31 @@ local function GetSpellIdByName(spellName)
 		return tonumber(spellLink:match("spell:(%d+)"))
 	end
 	return nil
+end
+
+-- update the spell name under the "unmodified" buttons with the spell name from the current modifier state
+-- we do this because the modified button is never actually used, instead the action on the default button
+-- changes when ctrl/shift is held.
+function UpdateSpellNameCache(cacheBase)
+	if InCombatLockdown() then return end
+
+	local currentModifier = ConsolePort and ConsolePort:GetCurrentModifier() or ""
+
+	for button in next, ButtonRegistry do
+		local type, action = button:GetAction(currentModifier)
+		local currentSpellName = nil
+
+		if type == "action" and action then
+			local actionType, id, subType, spellID = GetActionInfo(action)
+			if actionType == "spell" and spellID then
+				currentSpellName = GetSpellInfo(spellID)
+			end
+		elseif type == "spell" and action then
+			currentSpellName = GetSpellInfo(action)
+		end
+
+		button:SetAttribute("cpspellname", currentSpellName)
+	end
 end
 
 -----------------------------------------------------------

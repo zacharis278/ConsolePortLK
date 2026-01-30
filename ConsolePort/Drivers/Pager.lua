@@ -50,26 +50,28 @@ local PAGER_SECURE_FUNCTIONS = {
 		end
 	]],
 	IsHarmfulAction = [[
-		local type, id = control:RunFor(self, self:GetAttribute('GetActionInfo'), ...)
-		if type == 'spell' then
-			local slot = control:RunFor(self, self:GetAttribute('GetActionSpellSlot'), ...)
-			if slot then
-				return IsHarmfulSpell(slot, 'spell')
+		local actionID = control:RunFor(self, self:GetAttribute('GetActionID'), ...)
+		if actionID then
+			local type, id = GetActionInfo(actionID)
+			if type == 'spell' then
+				return nil
+			elseif type == 'item' and id then
+				return IsHarmfulItem(id)
 			end
-		elseif type == 'item' and id then
-			return IsHarmfulItem(id)
 		end
+		return nil
 	]],
 	IsHelpfulAction = [[
-		local type, id = control:RunFor(self, self:GetAttribute('GetActionInfo'), ...)
-		if type == 'spell' then
-			local slot = control:RunFor(self, self:GetAttribute('GetActionSpellSlot'), ...)
-			if slot then
-				return IsHelpfulSpell(slot, 'spell')
+		local actionID = control:RunFor(self, self:GetAttribute('GetActionID'), ...)
+		if actionID then
+			local type, id = GetActionInfo(actionID)
+			if type == 'spell' then
+				return nil
+			elseif type == 'item' and id then
+				return IsHelpfulItem(id)
 			end
-		elseif type == 'item' and id then
-			return IsHelpfulItem(id)
 		end
+		return nil
 	]],
 }
 

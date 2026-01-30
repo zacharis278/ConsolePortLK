@@ -104,6 +104,13 @@ function Bar:UPDATE_BONUS_ACTIONBAR()
 	WrapperLib:UpdateAllBindings()
 end
 
+function Bar:RefreshRaidCursorRouting()
+	print("Bar:RefreshRaidCursorRouting called")
+	if ConsolePort and ConsolePort.RefreshRaidCursorRouting then
+		ConsolePort:RefreshRaidCursorRouting()
+	end
+end
+
 function Bar:LoadReticleSpells()
 	Bar:Execute('wipe(reticleSpellManifest)')
 	local reticleSpells = ab.manifest and ab.manifest.ReticleSpells
@@ -335,7 +342,8 @@ for name, script in pairs({
 		control:ChildUpdate('state', newstate)
 		if self:GetAttribute('pageupdate') then
 			control:RunAttribute('pageupdate')
-		end 
+		end
+		control:CallMethod('RefreshRaidCursorRouting')
 	]],
 	['_onstate-override'] = [[ 
 		control:RunAttribute('UpdateActionBar')
