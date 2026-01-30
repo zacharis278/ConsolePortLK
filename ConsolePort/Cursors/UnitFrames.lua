@@ -257,20 +257,22 @@ do
 						for action in pairs(Helpful) do
 							action:SetAttribute('unit', unit)
 						end
-					end
-
-					print('=== Final Action Routing ===')
-					for action in pairs(Actions) do
-						local buttonName = action:GetName()
-						local actionID = action:GetAttribute('action')
-						local spellName = action:GetAttribute('cpspellname')
-						local targetUnit = action:GetAttribute('unit')
-						if spellName then
-							print('Button:', buttonName or 'unnamed', 'Action:', actionID or 'nil', 'Spell:', spellName, '-> unit:', targetUnit or 'nil')
+						for action in pairs(Harmful) do
+							action:SetAttribute('unit', nil)
 						end
 					end
-					print('=== End Routing ===')
-					self:SetAttribute('lastRoutedUnit', unit)
+
+					-- print('=== Final Action Routing ===')
+					-- for action in pairs(Actions) do
+					-- 	local buttonName = action:GetName()
+					-- 	local actionID = action:GetAttribute('action')
+					-- 	local spellName = action:GetAttribute('cpspellname')
+					-- 	local targetUnit = action:GetAttribute('unit')
+					-- 	if spellName then
+					-- 		print('Button:', buttonName or 'unnamed', 'Action:', actionID or 'nil', 'Spell:', spellName, '-> unit:', targetUnit or 'nil')
+					-- 	end
+					-- end
+					-- print('=== End Routing ===')
 				end
 			else
 				UnregisterStateDriver(self, 'unitexists')
