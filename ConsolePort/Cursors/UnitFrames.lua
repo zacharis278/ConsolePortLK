@@ -338,6 +338,12 @@ do
 			self:Run(SelectNode, 0)
 		end
 	]])
+	Cursor:SetAttribute('modifierupdate', [[
+		if IsEnabled then
+			self:Run(RefreshActions)
+			self:Run(UpdateRouting)
+		end
+	]])
 	------------------------------------------------------------------------------------------------------------------------------
 	Cursor:WrapScript(Cursor.ToggleButton, 'OnClick', [[
 		local Cursor = self:GetParent()
@@ -379,15 +385,6 @@ function ConsolePort:SetupRaidCursor()
 	Cursor.Timer = 0
 	Cursor:SetScript('OnUpdate', Cursor.OnUpdate)
 	Cursor:SetScript('OnEvent', Cursor.OnEvent)
-end
-
-function ConsolePort:RefreshRaidCursorRouting()
-	if not InCombatLockdown() and Cursor:IsVisible() then
-		Cursor:Execute([[
-			control:Run(RefreshActions)
-			control:Run(UpdateRouting)
-		]])
-	end
 end
 
 function ConsolePort:LoadRaidCursor()
