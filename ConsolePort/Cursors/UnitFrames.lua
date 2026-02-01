@@ -338,10 +338,11 @@ do
 			self:Run(SelectNode, 0)
 		end
 	]])
-	Cursor:SetAttribute('modifierupdate', [[
+	RegisterStateDriver(Cursor, 'modifier', '[mod:ctrl,mod:shift] CTRL-SHIFT-; [mod:ctrl] CTRL-; [mod:shift] SHIFT-; ')
+	Cursor:SetAttribute('_onstate-modifier', [[
 		if IsEnabled then
-			self:Run(RefreshActions)
-			self:Run(UpdateRouting)
+			control:Run(RefreshActions)
+			control:Run(UpdateRouting)
 		end
 	]])
 	------------------------------------------------------------------------------------------------------------------------------

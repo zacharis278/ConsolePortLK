@@ -336,9 +336,6 @@ for name, script in pairs({
 		if self:GetAttribute('pageupdate') then
 			control:RunAttribute('pageupdate')
 		end
-		if cursor:GetAttribute('modifierupdate') then
-			control:RunFor(cursor, cursor:GetAttribute('modifierupdate'))
-		end
 	]],
 	['_onstate-override'] = [[ 
 		control:RunAttribute('UpdateActionBar')
